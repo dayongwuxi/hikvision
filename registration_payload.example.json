@@ -1,0 +1,28 @@
+{
+  "receptionistId": "",
+  "visitStartTime": "2026-08-24T20:00:00+09:00",
+  "visitEndTime": "2026-08-25T12:00:00+09:00",
+  "visitPurposeType": 0,
+  "visitPurpose": "visitor",
+  "visitorInfoList": [
+    {
+      "VisitorInfo": {
+        "visitorFamilyName": "001",
+        "visitorGivenName": "apitest016",
+        "gender": 0,
+        "email": "dayong.wu@sea-tech.info",
+        "phoneNo": "",
+        "plateNo": "",
+        "companyName": "AAA",
+        "certificateType": 111,
+        "certificateNo": "20016",
+        "remark": "visitor",
+        "cards": [
+          {
+            "cardNo": "30016"
+          }
+        ]
+      }
+    }
+  ]
+}

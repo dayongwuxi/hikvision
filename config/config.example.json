@@ -1,0 +1,5 @@
+{
+  "AccessKey": "replace-with-your-access-key",
+  "SecretKey": "replace-with-your-secret-key",
+  "APIbaseUrl": "https://hikcentral.example.com"
+}

@@ -1,0 +1,28 @@
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# IDE and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local credentials and backups
+config/config.json
+config/config.BAK
+.env
+.env.*
+!.env.example
+
+# Runtime state and generated output
+*.db
+*.db-shm
+*.db-wal
+result.json
+output/
