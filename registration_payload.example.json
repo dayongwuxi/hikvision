@@ -1,7 +1,7 @@
 {
   "receptionistId": "",
   "visitStartTime": "2026-08-24T20:00:00+09:00",
-  "visitEndTime": "2026-08-25T12:00:00+09:00",
+  "visitEndTime": "2099-12-31T23:59:59+09:00",
   "visitPurposeType": 0,
   "visitPurpose": "visitor",
   "visitorInfoList": [

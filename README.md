@@ -57,18 +57,18 @@ Copy-Item config\config.example.json config\config.json
 | `PRIVILEGE_GROUP_ID` | 海康门禁权限组 ID | `34` |
 | `DOOR_INDEX_CODE` | 接收权限的门禁设备 ID | `56` |
 | `VISIT_START_TIME` | 访问开始时间，包含时区 | `2026-08-24T23:00:00+09:00` |
-| `VISIT_END_TIME` | 访问结束时间，包含时区 | `2026-08-25T12:00:00+09:00` |
-| `BATCH_START` | 批次起始编号，包含该编号 | `3050` |
-| `BATCH_STOP` | 批次结束编号，不包含该编号 | `3060` |
-| `MAX_ATTEMPTS` | 权限组关联和设备下发的最大尝试次数 | `5` |
-| `RETRY_INTERVAL_SECONDS` | 重试及下发结果查询等待秒数 | `30` |
+| `VISIT_END_TIME` | 访问结束时间，包含时区 | `2026-12-31T23:59:59+09:00` |
+| `BATCH_START` | 批次起始编号，包含该编号 | `3300` |
+| `BATCH_STOP` | 批次结束编号，不包含该编号 | `BATCH_START + 10` |
+| `MAX_ATTEMPTS` | 权限组关联和设备下发的最大尝试次数 | `4` |
+| `RETRY_INTERVAL_SECONDS` | 步骤间隔、重试及下发结果查询等待秒数 | `20` |
 
-例如，`BATCH_START = 3050`、`BATCH_STOP = 3060` 会处理 `3050` 到 `3059`，共 10 名访客。每个编号自动生成：
+当前设置会处理 `3300` 到 `3309`，共 10 名访客。第一个编号自动生成：
 
 ```text
-visitorGivenName = apitest0203050
-certificateNo    = 203050
-cardNo           = 303050
+visitorGivenName = apitest0203300
+certificateNo    = 203300
+cardNo           = 303300
 ```
 
 再次运行相同批次可能产生重复访客或遇到证件号、卡号冲突。运行前应确认编号范围尚未使用。
@@ -90,8 +90,8 @@ python api_register_and_add_group.py
 1. 生成访客姓名、证件号和卡号。
 2. 调用 `/artemis/api/visitor/v1/registerment` 创建访客预约。
 3. 从返回结果读取 `visitorId` 和 `appointRecordId`。
-4. 调用 `/artemis/api/acs/v1/privilege/group/single/addPersons` 加入权限组，失败时最多尝试 `MAX_ATTEMPTS` 次。
-5. 调用 `/artemis/api/visitor/v1/auth/reapplication` 触发设备下发。
+4. 等待 `RETRY_INTERVAL_SECONDS` 秒后，调用 `/artemis/api/acs/v1/privilege/group/single/addPersons` 加入权限组，失败时最多尝试 `MAX_ATTEMPTS` 次。
+5. 权限组处理完成后再次等待 `RETRY_INTERVAL_SECONDS` 秒，再调用 `/artemis/api/visitor/v1/auth/reapplication` 触发设备下发。
 6. 等待 `RETRY_INTERVAL_SECONDS` 秒后，调用 `/artemis/api/visitor/v1/person/ID/elementDownloadDetail` 查询结果。
 7. 只有查询到至少一个 `elementStatus`，且所有状态均为 `0`，才判定下发成功。
 

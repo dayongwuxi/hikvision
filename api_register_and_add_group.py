@@ -16,11 +16,11 @@ with (root / "config/config.json").open(encoding="utf-8") as config_file:
 PRIVILEGE_GROUP_ID = "34"
 DOOR_INDEX_CODE = "56"
 VISIT_START_TIME = "2026-08-24T23:00:00+09:00"
-VISIT_END_TIME = "2026-08-25T12:00:00+09:00"
-BATCH_START = 3050
-BATCH_STOP = 3060
-MAX_ATTEMPTS = 5
-RETRY_INTERVAL_SECONDS = 30
+VISIT_END_TIME = "2026-12-31T23:59:59+09:00"
+BATCH_START = 3300
+BATCH_STOP = BATCH_START + 10
+MAX_ATTEMPTS = 4
+RETRY_INTERVAL_SECONDS = 20
 
 
 def build_headers(path: str) -> dict[str, str]:
@@ -247,8 +247,9 @@ def main() -> None:
                 indent=2,
             )
         )
-
+        time.sleep(RETRY_INTERVAL_SECONDS)
         group_added = add_visitor_to_group(visitor_id)
+        time.sleep(RETRY_INTERVAL_SECONDS)
         download_succeeded = (
             group_added and download_visitor_permission(visitor_id)
         )
