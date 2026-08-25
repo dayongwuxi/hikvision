@@ -18,8 +18,8 @@ DOOR_INDEX_CODE = "56"
 VISIT_START_TIME = "2026-08-24T23:00:00+09:00"
 VISIT_END_TIME = "2026-12-31T23:59:59+09:00"
 
-BATCH_START = 3700
-BATCH_STOP = BATCH_START + 100
+BATCH_START = 4000
+BATCH_STOP = BATCH_START + 10
 MAX_API_ATTEMPTS = 4
 GROUP_CONFIRM_ATTEMPTS = 6
 DOWNLOAD_POLL_ATTEMPTS = 6
@@ -489,6 +489,7 @@ def save_successful_visitor(
         "doorIndexCode": DOOR_INDEX_CODE,
         "visitStartTime": VISIT_START_TIME,
         "visitEndTime": VISIT_END_TIME,
+        "checkin": "ON",
     }
     with SUCCESS_RECORD_PATH.open("a", encoding="utf-8") as output_file:
         output_file.write(json.dumps(record, ensure_ascii=False) + "\n")

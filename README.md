@@ -58,8 +58,8 @@ Copy-Item config\config.example.json config\config.json
 | `DOOR_INDEX_CODE` | 接收权限的门禁设备 ID | `56` |
 | `VISIT_START_TIME` | 访问开始时间，包含时区 | `2026-08-24T23:00:00+09:00` |
 | `VISIT_END_TIME` | 访问结束时间，包含时区 | `2026-12-31T23:59:59+09:00` |
-| `BATCH_START` | 批次起始编号，包含该编号 | `3700` |
-| `BATCH_STOP` | 批次结束编号，不包含该编号 | `BATCH_START + 100` |
+| `BATCH_START` | 批次起始编号，包含该编号 | `4000` |
+| `BATCH_STOP` | 批次结束编号，不包含该编号 | `BATCH_START + 10` |
 | `MAX_API_ATTEMPTS` | 权限组关联接口最大尝试次数 | `4` |
 | `GROUP_CONFIRM_ATTEMPTS` | 权限组成员状态最大确认次数 | `6` |
 | `GROUP_CONFIRM_INTERVAL_SECONDS` | 权限组成员状态确认间隔 | `5` |
@@ -70,12 +70,12 @@ Copy-Item config\config.example.json config\config.json
 | `DOWNLOAD_POLL_INTERVAL_SECONDS` | 设备下发结果查询间隔 | `20` |
 | `CLEANUP_GRACE_SECONDS` | 最终检查前的清理宽限时间 | `30` |
 
-当前设置会处理 `3700` 到 `3799`，共 100 名访客。第一个编号自动生成：
+当前设置会处理 `4000` 到 `4009`，共 10 名访客。第一个编号自动生成：
 
 ```text
-visitorGivenName = apitest0203700
-certificateNo    = 203700
-cardNo           = 303700
+visitorGivenName = apitest0204000
+certificateNo    = 204000
+cardNo           = 304000
 ```
 
 再次运行相同批次可能产生重复访客或遇到证件号、卡号冲突。运行前应确认编号范围尚未使用。

@@ -25,5 +25,8 @@ config/config.BAK
 *.db-shm
 *.db-wal
 result.json
-successful_visitor_records.jsonl
+successful_visitor_records.*
 output/
+
+# Java/Maven build output
+target/
