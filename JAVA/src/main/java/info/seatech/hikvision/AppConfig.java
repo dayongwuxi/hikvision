@@ -19,7 +19,7 @@ public record AppConfig(String accessKey, String secretKey, String apiBaseUrl) {
     private static String required(JsonNode root, String name, Path path) {
         String value = root.path(name).asText("").trim();
         if (value.isEmpty()) {
-            throw new IllegalArgumentException("配置文件缺少字段 " + name + ": " + path);
+            throw new IllegalArgumentException("設定ファイルに必須項目がありません: " + name + ": " + path);
         }
         return value;
     }

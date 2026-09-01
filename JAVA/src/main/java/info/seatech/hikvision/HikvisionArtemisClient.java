@@ -54,22 +54,22 @@ public final class HikvisionArtemisClient implements ArtemisApi {
                     .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body), StandardCharsets.UTF_8))
                     .build();
         } catch (RuntimeException | JsonProcessingException exception) {
-            throw new ApiException("构造请求失败: path=" + path, false, exception);
+            throw new ApiException("リクエストの構築に失敗しました: path=" + path, false, exception);
         }
 
         HttpResponse<String> response;
         try {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (IOException exception) {
-            throw new ApiException("网络请求失败: path=" + path + ", " + exception.getMessage(), true, exception);
+            throw new ApiException("ネットワークリクエストに失敗しました: path=" + path + ", " + exception.getMessage(), true, exception);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new ApiException("请求被中断: path=" + path, true, exception);
+            throw new ApiException("リクエストが中断されました: path=" + path, true, exception);
         }
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new ApiException(
-                    "HTTP 请求失败: path=" + path + ", status=" + response.statusCode()
+                    "HTTPリクエストに失敗しました: path=" + path + ", status=" + response.statusCode()
                             + ", body=" + response.body(),
                     true
             );
@@ -79,10 +79,10 @@ public final class HikvisionArtemisClient implements ArtemisApi {
         try {
             parsed = mapper.readTree(response.body());
         } catch (JsonProcessingException exception) {
-            throw new ApiException("API 返回结果不是有效 JSON: path=" + path, true, exception);
+            throw new ApiException("APIレスポンスが有効なJSONではありません: path=" + path, true, exception);
         }
         if (!(parsed instanceof ObjectNode result)) {
-            throw new ApiException("API 返回结果不是 JSON 对象: path=" + path, true);
+            throw new ApiException("APIレスポンスがJSONオブジェクトではありません: path=" + path, true);
         }
         if (!"0".equals(result.path("code").asText())) {
             throw new ApiException(
@@ -103,7 +103,7 @@ public final class HikvisionArtemisClient implements ArtemisApi {
             mac.init(new SecretKeySpec(config.secretKey().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             return Base64.getEncoder().encodeToString(mac.doFinal(text.getBytes(StandardCharsets.UTF_8)));
         } catch (GeneralSecurityException exception) {
-            throw new ApiException("生成 Artemis 签名失败", false, exception);
+            throw new ApiException("Artemis署名の生成に失敗しました", false, exception);
         }
     }
 
@@ -113,7 +113,7 @@ public final class HikvisionArtemisClient implements ArtemisApi {
 
     private static HttpClient insecureHttpClient() {
         try {
-            // 对齐 Python requests 的 verify=False：私有证书环境同时跳过证书链和主机名校验。
+            // Python requests の verify=False と同等にし、プライベート証明書環境では証明書チェーンとホスト名の検証を両方スキップする。
             System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
             TrustManager[] trustAll = {new X509TrustManager() {
                 @Override
@@ -139,7 +139,7 @@ public final class HikvisionArtemisClient implements ArtemisApi {
                     .sslParameters(parameters)
                     .build();
         } catch (GeneralSecurityException exception) {
-            throw new IllegalStateException("无法初始化兼容私有证书的 HTTP 客户端", exception);
+            throw new IllegalStateException("プライベート証明書対応のHTTPクライアントを初期化できません", exception);
         }
     }
 }

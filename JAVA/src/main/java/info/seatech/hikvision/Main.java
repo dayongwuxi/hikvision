@@ -16,12 +16,12 @@ public final class Main {
         Path recordPath = projectRoot.resolve("successful_visitor_records.jsonl");
 
         if (!Files.isRegularFile(configPath)) {
-            System.err.println("找不到配置文件: " + configPath);
-            System.err.println("请先将 config/config.example.json 复制为 config/config.json 并填写凭据。");
+            System.err.println("設定ファイルが見つかりません: " + configPath);
+            System.err.println("config/config.example.json を config/config.json にコピーし、認証情報を入力してください。");
             System.exit(2);
         }
         if (!Files.isRegularFile(payloadPath)) {
-            System.err.println("找不到访客资料文件: " + payloadPath);
+            System.err.println("訪問者データファイルが見つかりません: " + payloadPath);
             System.exit(2);
         }
 
@@ -35,12 +35,12 @@ public final class Main {
                     VisitorProvisioningService.Settings.pythonDefaults(),
                     recordPath
             );
-            System.out.println("项目目录: " + projectRoot);
-            System.out.println("配置文件: " + configPath);
-            System.out.println("访客资料: " + payloadPath);
+            System.out.println("プロジェクトディレクトリ: " + projectRoot);
+            System.out.println("設定ファイル: " + configPath);
+            System.out.println("訪問者データ: " + payloadPath);
             service.runBatch(payloadPath);
         } catch (Exception exception) {
-            System.err.println("程序启动或批处理失败: " + exception.getMessage());
+            System.err.println("プログラムの起動または一括処理に失敗しました: " + exception.getMessage());
             exception.printStackTrace(System.err);
             System.exit(1);
         }

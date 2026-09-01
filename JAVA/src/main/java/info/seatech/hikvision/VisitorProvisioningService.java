@@ -47,8 +47,8 @@ public final class VisitorProvisioningService {
             return new Settings(
                     "34", "56",
                     "2026-08-24T23:00:00+09:00",
-                    "2026-12-31T23:59:59+09:00",
-                    4000, 4010,
+                    "2037-12-31T23:59:59+09:00",
+                    5010, 5100,
                     4, 6, 6, 3, 2,
                     20, 5, 20, 30
             );
@@ -94,7 +94,7 @@ public final class VisitorProvisioningService {
     public void runBatch(Path payloadPath) throws IOException {
         JsonNode loaded = mapper.readTree(payloadPath.toFile());
         if (!(loaded instanceof ObjectNode visitorData)) {
-            throw new IllegalArgumentException("访客资料必须是 JSON 对象: " + payloadPath);
+            throw new IllegalArgumentException("訪問者データはJSONオブジェクトである必要があります: " + payloadPath);
         }
         visitorData.put("visitStartTime", settings.visitStartTime());
         visitorData.put("visitEndTime", settings.visitEndTime());
@@ -112,10 +112,10 @@ public final class VisitorProvisioningService {
                 visitor = api.post(REGISTERMENT, visitorData);
             } catch (ApiException exception) {
                 if (exception.isResultUncertain()) {
-                    System.out.println("访客登记结果不确定，为避免继续生成重复访客，停止批次: " + exception.getMessage());
+                    System.out.println("訪問者登録の結果を確定できません。重複登録を防ぐため、バッチを停止します: " + exception.getMessage());
                     break;
                 }
-                System.out.println("访客登记失败: " + exception.getMessage());
+                System.out.println("訪問者登録に失敗しました: " + exception.getMessage());
                 continue;
             }
 
@@ -123,7 +123,7 @@ public final class VisitorProvisioningService {
             JsonNode visitorIdNode = data == null ? null : data.get("visitorId");
             JsonNode appointIdNode = data == null ? null : data.get("appointRecordId");
             if (visitorIdNode == null || visitorIdNode.isNull() || appointIdNode == null || appointIdNode.isNull()) {
-                System.out.println("登记返回成功但缺少 visitorId 或 appointRecordId，为避免重复创建，停止批次");
+                System.out.println("登録成功レスポンスに visitorId または appointRecordId がありません。重複登録を防ぐため、バッチを停止します");
                 break;
             }
             String visitorId = visitorIdNode.asText();
@@ -136,11 +136,11 @@ public final class VisitorProvisioningService {
 
             GroupAddOutcome groupOutcome = addVisitorToGroup(visitorId);
             if (groupOutcome == GroupAddOutcome.UNKNOWN) {
-                System.out.println("权限组关联结果不确定，本次不继续下发，也不执行自动清理；请根据 visitorId 人工核对");
+                System.out.println("権限グループへの関連付け結果を確定できないため、デバイス配信と自動クリーンアップは実行しません。visitorId を使用して手動で確認してください");
                 continue;
             }
             if (groupOutcome == GroupAddOutcome.FAILED) {
-                System.out.println("权限组关联失败，开始清理未下发的访客");
+                System.out.println("権限グループへの関連付けに失敗しました。未配信の訪問者をクリーンアップします");
                 cleanupFailedVisitor(visitorId, appointRecordId, visitorName);
                 continue;
             }
@@ -153,13 +153,13 @@ public final class VisitorProvisioningService {
 
             DownloadOutcome finalOutcome = finalDownloadCheck(visitorId);
             if (finalOutcome == DownloadOutcome.SUCCESS) {
-                System.out.println("最后确认时发现设备下发已经成功，取消清理");
+                System.out.println("最終確認でデバイス配信の成功を検出したため、クリーンアップを中止します");
                 trySaveSuccessfulVisitor(visitorId, appointRecordId, visitorName);
             } else if (downloadOutcome == DownloadOutcome.FAILED && finalOutcome == DownloadOutcome.FAILED) {
-                System.out.println("最终确认仍为下发失败，开始统一清理访客");
+                System.out.println("最終確認でも配信失敗だったため、訪問者をクリーンアップします");
                 cleanupFailedVisitor(visitorId, appointRecordId, visitorName);
             } else {
-                System.out.println("没有得到两阶段一致的失败结论，为避免删除仍在异步处理的访客，本次不执行自动清理");
+                System.out.println("2段階で一致した失敗結果を確認できませんでした。非同期処理中の訪問者を削除しないよう、自動クリーンアップは実行しません");
             }
         }
     }
@@ -205,13 +205,13 @@ public final class VisitorProvisioningService {
         for (int attempt = 1; attempt <= settings.groupConfirmAttempts(); attempt++) {
             try {
                 boolean member = groupContainsVisitor(visitorId);
-                System.out.printf("权限组确认：第 %d/%d 次，isMember=%s%n",
+                System.out.printf("権限グループ確認: %d/%d 回目、isMember=%s%n",
                         attempt, settings.groupConfirmAttempts(), member);
                 if (member == expected) {
                     return MembershipCheck.CONFIRMED;
                 }
             } catch (ApiException exception) {
-                System.out.println("查询权限组成员失败，状态记为 unknown: " + exception.getMessage());
+                System.out.println("権限グループのメンバー照会に失敗したため、状態を unknown とします: " + exception.getMessage());
                 return MembershipCheck.UNKNOWN;
             }
             if (attempt < settings.groupConfirmAttempts() && !sleep(settings.groupConfirmIntervalSeconds())) {
@@ -223,18 +223,18 @@ public final class VisitorProvisioningService {
 
     public GroupAddOutcome addVisitorToGroup(String visitorId) {
         for (int attempt = 1; attempt <= settings.maxApiAttempts(); attempt++) {
-            System.out.printf("权限组关联：第 %d/%d 次%n", attempt, settings.maxApiAttempts());
+            System.out.printf("権限グループへの関連付け: %d/%d 回目%n", attempt, settings.maxApiAttempts());
             try {
                 api.post(ADD_PERSONS, groupBody(visitorId));
             } catch (ApiException exception) {
-                System.out.println("加入权限组失败: " + exception.getMessage());
+                System.out.println("権限グループへの追加に失敗しました: " + exception.getMessage());
                 MembershipCheck membership = waitForGroupMembership(visitorId, true);
                 if (membership == MembershipCheck.CONFIRMED) {
-                    System.out.println("虽然 addPersons 返回异常，但已确认访客存在于权限组");
+                    System.out.println("addPersons はエラーを返しましたが、訪問者が権限グループに存在することを確認しました");
                     return GroupAddOutcome.SUCCESS;
                 }
                 if (membership == MembershipCheck.UNKNOWN) {
-                    System.out.println("addPersons 与 personList 的结果都无法确定，停止该访客的自动下发和清理，避免重复添加或误删");
+                    System.out.println("addPersons と personList の結果をどちらも確定できません。重複追加や誤削除を防ぐため、この訪問者の自動配信とクリーンアップを中止します");
                     return GroupAddOutcome.UNKNOWN;
                 }
                 if (attempt < settings.maxApiAttempts()) {
@@ -251,14 +251,14 @@ public final class VisitorProvisioningService {
                 return GroupAddOutcome.SUCCESS;
             }
             if (membership == MembershipCheck.UNKNOWN) {
-                System.out.printf("addPersons 已明确成功，但 personList 无法使用；等待 %d 秒后继续设备下发%n",
+                System.out.printf("addPersons は成功しましたが、personList を使用できません。%d 秒待機してからデバイス配信を続行します%n",
                         settings.retryIntervalSeconds());
                 if (!sleep(settings.retryIntervalSeconds())) {
                     return GroupAddOutcome.UNKNOWN;
                 }
                 return GroupAddOutcome.SUCCESS;
             }
-            System.out.println("addPersons 已成功，但多次查询仍未在权限组中找到访客");
+            System.out.println("addPersons は成功しましたが、複数回照会しても権限グループ内に訪問者が見つかりませんでした");
             return GroupAddOutcome.FAILED;
         }
         return GroupAddOutcome.FAILED;
@@ -267,7 +267,7 @@ public final class VisitorProvisioningService {
     public DownloadOutcome pollDownloadResult(String visitorId) {
         int consecutiveFailures = 0;
         for (int attempt = 1; attempt <= settings.downloadPollAttempts(); attempt++) {
-            System.out.printf("等待 %d 秒后查询下发结果：第 %d/%d 次%n",
+            System.out.printf("%d 秒待機してから配信結果を照会します: %d/%d 回目%n",
                     settings.downloadPollIntervalSeconds(), attempt, settings.downloadPollAttempts());
             if (!sleep(settings.downloadPollIntervalSeconds())) {
                 return DownloadOutcome.UNKNOWN;
@@ -276,41 +276,41 @@ public final class VisitorProvisioningService {
             try {
                 detail = api.post(DOWNLOAD_DETAIL, idBody(visitorId));
             } catch (ApiException exception) {
-                System.out.println("查询设备下发结果失败: " + exception.getMessage());
+                System.out.println("デバイス配信結果の照会に失敗しました: " + exception.getMessage());
                 continue;
             }
             String classification = classifyDownloadDetail(detail);
-            System.out.println("下发查询结果：classification=" + classification
+            System.out.println("配信照会結果: classification=" + classification
                     + ", elementStatus=" + extractElementStatuses(detail));
             if ("success".equals(classification)) {
-                printDownloadDetail("●下发成功●", detail);
+                printDownloadDetail("●配信成功●", detail);
                 return DownloadOutcome.SUCCESS;
             }
             if ("failed".equals(classification)) {
                 consecutiveFailures++;
-                printDownloadDetail("设备返回下发失败，保留完整错误信息：", detail);
+                printDownloadDetail("デバイスから配信失敗が返されました。完全なエラー情報を表示します:", detail);
                 if (consecutiveFailures >= settings.failureConfirmationPolls()) {
-                    System.out.printf("连续 %d 次确认下发失败，允许进入重新下发处理%n", consecutiveFailures);
+                    System.out.printf("配信失敗を連続 %d 回確認したため、再配信処理へ進みます%n", consecutiveFailures);
                     return DownloadOutcome.FAILED;
                 }
-                System.out.println("先继续查询一次，避免把重新下发前的旧失败快照误判为新任务失败");
+                System.out.println("再配信前の古い失敗スナップショットを新しいジョブの失敗と誤判定しないよう、照会をもう一度続行します");
                 continue;
             }
             consecutiveFailures = 0;
             if ("pending".equals(classification)) {
-                System.out.println("设备任务仍处于待处理状态，继续查询，不重复触发下发");
+                System.out.println("デバイスジョブは処理待ちです。配信を重複して開始せず、照会を続行します");
             } else {
-                printDownloadDetail("返回结构中没有可识别的 elementStatus，继续查询：", detail);
+                printDownloadDetail("レスポンス内に認識可能な elementStatus がありません。照会を続行します:", detail);
             }
         }
-        System.out.println("在查询期限内没有得到明确的成功或连续失败结果");
+        System.out.println("照会期間内に明確な成功結果または連続した失敗結果を取得できませんでした");
         return DownloadOutcome.UNKNOWN;
     }
 
     public DownloadOutcome downloadVisitorPermission(String visitorId) {
         for (int attempt = 1; attempt <= settings.maxReapplicationAttempts(); attempt++) {
-            String action = attempt == 1 ? "首次下发" : "重新下发";
-            System.out.printf("%s：第 %d/%d 个下发任务%n", action, attempt, settings.maxReapplicationAttempts());
+            String action = attempt == 1 ? "初回配信" : "再配信";
+            System.out.printf("%s: %d/%d 件目の配信ジョブ%n", action, attempt, settings.maxReapplicationAttempts());
             ObjectNode body = mapper.createObjectNode();
             body.put("ImmediateDownload", 0);
             body.put("personIds", visitorId);
@@ -318,7 +318,7 @@ public final class VisitorProvisioningService {
             try {
                 api.post(REAPPLICATION, body);
             } catch (ApiException exception) {
-                System.out.println("触发设备下发失败: " + exception.getMessage());
+                System.out.println("デバイス配信の開始に失敗しました: " + exception.getMessage());
                 if (attempt < settings.maxReapplicationAttempts()) {
                     if (!sleep(settings.retryIntervalSeconds())) {
                         return DownloadOutcome.UNKNOWN;
@@ -335,7 +335,7 @@ public final class VisitorProvisioningService {
                 return DownloadOutcome.UNKNOWN;
             }
             if (attempt < settings.maxReapplicationAttempts()) {
-                System.out.printf("本次下发已确认失败，等待 %d 秒后重新下发%n", settings.retryIntervalSeconds());
+                System.out.printf("今回の配信失敗を確認しました。%d 秒待機してから再配信します%n", settings.retryIntervalSeconds());
                 if (!sleep(settings.retryIntervalSeconds())) {
                     return DownloadOutcome.UNKNOWN;
                 }
@@ -345,7 +345,7 @@ public final class VisitorProvisioningService {
     }
 
     public DownloadOutcome finalDownloadCheck(String visitorId) {
-        System.out.printf("清理前等待 %d 秒并做最后一次设备状态确认%n", settings.cleanupGraceSeconds());
+        System.out.printf("クリーンアップ前に %d 秒待機し、デバイス状態を最終確認します%n", settings.cleanupGraceSeconds());
         if (!sleep(settings.cleanupGraceSeconds())) {
             return DownloadOutcome.UNKNOWN;
         }
@@ -353,11 +353,11 @@ public final class VisitorProvisioningService {
         try {
             detail = api.post(DOWNLOAD_DETAIL, idBody(visitorId));
         } catch (ApiException exception) {
-            System.out.println("清理前最终查询失败，状态不确定，禁止自动清理: " + exception.getMessage());
+            System.out.println("クリーンアップ前の最終照会に失敗し、状態を確定できないため、自動クリーンアップを禁止します: " + exception.getMessage());
             return DownloadOutcome.UNKNOWN;
         }
         String status = classifyDownloadDetail(detail);
-        printDownloadDetail("清理前最终状态：" + status, detail);
+        printDownloadDetail("クリーンアップ前の最終状態: " + status, detail);
         return switch (status) {
             case "success" -> DownloadOutcome.SUCCESS;
             case "failed" -> DownloadOutcome.FAILED;
@@ -370,29 +370,29 @@ public final class VisitorProvisioningService {
         try {
             member = groupContainsVisitor(visitorId);
         } catch (ApiException exception) {
-            System.out.println("清理前查询权限组成员失败，将尝试执行解除权限组: " + exception.getMessage());
+            System.out.println("クリーンアップ前の権限グループメンバー照会に失敗しました。権限グループからの削除を試行します: " + exception.getMessage());
             member = true;
         }
         if (!member) {
-            System.out.println("访客已不在权限组中，无需再次解除: " + visitorName);
+            System.out.println("訪問者はすでに権限グループに存在しないため、再度削除する必要はありません: " + visitorName);
         } else {
             try {
                 api.post(DELETE_PERSONS, groupBody(visitorId));
-                System.out.println("解除权限组请求成功: " + visitorName);
+                System.out.println("権限グループからの削除リクエストに成功しました: " + visitorName);
             } catch (ApiException exception) {
-                System.out.println("解除权限组失败，为保留后续撤权能力，停止签退和删除人员: "
+                System.out.println("権限グループからの削除に失敗しました。後から権限を解除できる状態を維持するため、チェックアウトと人物削除を中止します: "
                         + visitorName + ", " + exception.getMessage());
                 return;
             }
             MembershipCheck removal = waitForGroupMembership(visitorId, false);
             if (removal != MembershipCheck.CONFIRMED) {
-                String reason = removal == MembershipCheck.UNKNOWN ? "personList 不可用" : "访客仍在权限组中";
-                System.out.println("未确认访客已从权限组移除（" + reason + "），为避免平台和设备状态失去关联，停止签退和删除人员");
+                String reason = removal == MembershipCheck.UNKNOWN ? "personList を使用できません" : "訪問者がまだ権限グループに存在します";
+                System.out.println("訪問者が権限グループから削除されたことを確認できませんでした（" + reason + "）。プラットフォームとデバイス状態の関連付けを維持するため、チェックアウトと人物削除を中止します");
                 return;
             }
         }
-        executeCleanup("访客签退", "/artemis/api/visitor/v1/visitor/out", "appointRecordId", appointRecordId, visitorName);
-        executeCleanup("删除人员", "/artemis/api/resource/v1/person/single/delete", "personId", visitorId, visitorName);
+        executeCleanup("訪問者のチェックアウト", "/artemis/api/visitor/v1/visitor/out", "appointRecordId", appointRecordId, visitorName);
+        executeCleanup("人物の削除", "/artemis/api/resource/v1/person/single/delete", "personId", visitorId, visitorName);
     }
 
     public List<ObjectNode> extractElementDiagnostics(JsonNode detail) {
@@ -507,7 +507,7 @@ public final class VisitorProvisioningService {
             System.out.println(label);
             System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(output));
         } catch (JsonProcessingException exception) {
-            System.out.println(label + "（格式化诊断信息失败: " + exception.getMessage() + "）");
+            System.out.println(label + "（診断情報の整形に失敗しました: " + exception.getMessage() + "）");
         }
     }
 
@@ -529,14 +529,14 @@ public final class VisitorProvisioningService {
                 StandardOpenOption.CREATE,
                 StandardOpenOption.APPEND
         );
-        System.out.println("已保存 visitorId 和 appointRecordId: " + successRecordPath);
+        System.out.println("visitorId と appointRecordId を保存しました: " + successRecordPath);
     }
 
     private void trySaveSuccessfulVisitor(String visitorId, String appointRecordId, String visitorName) {
         try {
             saveSuccessfulVisitor(visitorId, appointRecordId, visitorName);
         } catch (IOException exception) {
-            System.out.println("下发成功，但保存访客ID记录失败: " + exception.getMessage());
+            System.out.println("配信は成功しましたが、訪問者IDレコードの保存に失敗しました: " + exception.getMessage());
         }
     }
 
@@ -545,9 +545,9 @@ public final class VisitorProvisioningService {
         body.put(key, value);
         try {
             api.post(path, body);
-            System.out.println(action + "成功: " + visitorName);
+            System.out.println(action + "に成功しました: " + visitorName);
         } catch (ApiException exception) {
-            System.out.println(action + "失败: " + visitorName + ", " + exception.getMessage());
+            System.out.println(action + "に失敗しました: " + visitorName + ", " + exception.getMessage());
         }
     }
 
@@ -570,7 +570,7 @@ public final class VisitorProvisioningService {
     private static ObjectNode requireVisitorInfo(ObjectNode payload) {
         JsonNode node = payload.path("visitorInfoList").path(0).path("VisitorInfo");
         if (!(node instanceof ObjectNode object)) {
-            throw new IllegalArgumentException("registration_payload.example.json 缺少 visitorInfoList[0].VisitorInfo");
+            throw new IllegalArgumentException("registration_payload.example.json に visitorInfoList[0].VisitorInfo がありません");
         }
         return object;
     }
@@ -578,7 +578,7 @@ public final class VisitorProvisioningService {
     private static ObjectNode requireFirstCard(ObjectNode visitorInfo) {
         JsonNode node = visitorInfo.path("cards").path(0);
         if (!(node instanceof ObjectNode object)) {
-            throw new IllegalArgumentException("registration_payload.example.json 缺少 cards[0]");
+            throw new IllegalArgumentException("registration_payload.example.json に cards[0] がありません");
         }
         return object;
     }
@@ -623,7 +623,7 @@ public final class VisitorProvisioningService {
             return true;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            System.out.println("等待被中断，停止当前自动流程");
+            System.out.println("待機が中断されたため、現在の自動処理を停止します");
             return false;
         }
     }
